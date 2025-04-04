@@ -1,0 +1,10 @@
+<div>
+    <p>Multifield: </p>
+    <sly data-sly-list.var1="${resource.listChildren}">
+        <sly data-sly-list.var="${var1.listChildren}">
+        <sly data-sly-use.customTemp= "${'temp.html'}">
+            <sly data-sly-call="${customTemp.temp @param=var}">
+            </sly>
+        </sly>
+    </sly>
+</div>

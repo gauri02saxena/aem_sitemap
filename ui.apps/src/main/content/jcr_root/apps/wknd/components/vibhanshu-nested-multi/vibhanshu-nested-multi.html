@@ -1,0 +1,28 @@
+<p>Hey</p>
+
+<ul data-sly-use.level1="com.adobe.aem.guides.wknd.core.models.VibhanshuNestedMultiModel">
+    <sly data-sly-list.level2="${level1.nestedMulti2List}">
+        <li>
+            <strong>Level 1 Title:</strong> ${level2.title} <br>
+            <strong>Level 1 Link:</strong> <a href="${level2.link}">${level2.link}</a>
+
+            <ul>
+                <sly data-sly-list.level3="${level2.nestedMulti3List}">
+                    <li>
+                        <strong>Level 2 Title:</strong> ${level3.title} <br>
+                        <strong>Level 2 Link:</strong> <a href="${level3.link}">${level3.link}</a>
+
+                        <ul>
+                            <sly data-sly-list.item="${level3.nestedMulti3List}">
+                                <li>
+                                    <strong>Level 3 Title:</strong> ${item.title} <br>
+                                    <strong>Level 3 Link:</strong> <a href="${item.link}">${item.link}</a>
+                                </li>
+                            </sly>
+                        </ul>
+                    </li>
+                </sly>
+            </ul>
+        </li>
+    </sly>
+</ul>

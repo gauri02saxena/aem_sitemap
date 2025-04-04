@@ -1,0 +1,28 @@
+<div>
+<p><strong>Type of variant: </strong> ${properties.variantType}</p>
+<p><strong>Car's Make: </strong> ${properties.carMake}</p>
+<p><strong>Launch Date: </strong> ${'dd/MM/YYYY' @format= properties.launchDate}</p>
+<p><strong>Range after full charge: </strong> ${properties.range} KM</p>
+<p><strong>Name of the product: </strong> ${properties.productName}</p>
+<p><strong>Image of the car: </strong></p>
+<img src="${properties.sampleModel}" alt="Car Image" height="250em" width="500em"/>
+
+<p>Additional Details: </p>
+
+<table border="1" data-sly-list.variant="${resource.listChildren}">
+<tr>
+<th> Variant Name</th>
+<th> Price</th>
+<th> Color</th>
+<th> Feature</th>
+</tr>
+
+<tr data-sly-repeat="${variant.listChildren}">
+<td>${item.variantName}</td>
+<td>${item.price}</td>
+<td>${item.color}</td>
+<td>${item.features}</td>
+</tr>
+
+</table>
+</div>
