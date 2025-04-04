@@ -12,6 +12,7 @@ import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -19,7 +20,7 @@ import java.util.Iterator;
 import java.util.List;
 
 @Component(service = Servlet.class, immediate = true,
-        property = {Constants.SERVICE_DESCRIPTION + "=Sitemap Generator Servlet",
+        property = {Constants.SERVICE_DESCRIPTION + "=Sitemap Generator and Display Servlet",
                 "sling.servlet.methods=GET",
                 "sling.servlet.paths=/bin/sitemap.xml"})
 public class SitemapServlet extends SlingAllMethodsServlet {
@@ -29,14 +30,11 @@ public class SitemapServlet extends SlingAllMethodsServlet {
         response.setContentType("text/plain");
         response.setCharacterEncoding("UTF-8");
 
-        // Log that the process has started
-        response.getWriter().write("Sitemap generation started...\n");
-
         // Generate the sitemap and store it in a file
         generateSitemapToFile(request, response);
 
-        // Log success message
-        response.getWriter().write("Sitemap generated and saved to file.\n");
+        // Display the sitemap from the file
+        displaySitemapFile(response);
     }
 
     private void generateSitemapToFile(SlingHttpServletRequest request, SlingHttpServletResponse response) throws IOException {
@@ -60,19 +58,10 @@ public class SitemapServlet extends SlingAllMethodsServlet {
 
         // Specify the path where the sitemap file should be stored
         String sitemapFilePath = "/var/www/sitemaps/sitemap.xml"; // Use the directory already created on AEM
+        File file = new File(sitemapFilePath);
 
         // Log the file path to verify
         response.getWriter().write("Sitemap will be saved to: " + sitemapFilePath + "\n");
-
-        // Create a File object for the sitemap file
-        File file = new File(sitemapFilePath);
-
-        // Check if the parent directory exists, but no need to create it since the directory is already there
-        if (file.getParentFile().exists()) {
-            response.getWriter().write("Directory exists.\n");
-        } else {
-            response.getWriter().write("Directory does not exist.\n");
-        }
 
         // Write the sitemap XML to the file
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
@@ -81,6 +70,23 @@ public class SitemapServlet extends SlingAllMethodsServlet {
         } catch (IOException e) {
             response.getWriter().write("Error writing the sitemap file: " + e.getMessage() + "\n");
             e.printStackTrace();
+        }
+    }
+
+    private void displaySitemapFile(SlingHttpServletResponse response) throws IOException {
+        String sitemapFilePath = "/var/www/sitemaps/sitemap.xml"; // Path of the sitemap file
+        File file = new File(sitemapFilePath);
+
+        if (file.exists()) {
+            // Read the file content and display it in the response
+            try (FileReader fileReader = new FileReader(file)) {
+                int character;
+                while ((character = fileReader.read()) != -1) {
+                    response.getWriter().write(character);
+                }
+            }
+        } else {
+            response.getWriter().write("Sitemap file not found.\n");
         }
     }
 
