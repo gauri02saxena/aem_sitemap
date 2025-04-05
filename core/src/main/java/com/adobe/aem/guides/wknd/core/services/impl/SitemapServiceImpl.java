@@ -1,4 +1,4 @@
-package com.adobe.aem.guides.wknd.core.services.impl;
+package com.adobe.ae.m.guides.wknd.core.services.impl;
 
 import com.adobe.aem.guides.wknd.core.services.SitemapService;
 import com.day.cq.wcm.api.Page;
@@ -15,7 +15,7 @@ import java.util.List;
 public class SitemapServiceImpl implements SitemapService {
 
     @Override
-    public String generateSitemap(SlingHttpServletRequest request){
+    public String generateSitemap(SlingHttpServletRequest request) {
         // Get the list of pages
         List<Page> pages = getAllPages(request);
 
@@ -25,19 +25,29 @@ public class SitemapServiceImpl implements SitemapService {
 
         for (Page page : pages) {
             String pageUrl = page.getPath();
+
+            // Check if the page should be excluded based on the sitemapExclude property
+            boolean isPageExcluded = isPageExcluded(page);
+            if (isPageExcluded) {
+                continue; // Skip this page if excluded
+            }
+
             sitemapXml.append("<url>");
             sitemapXml.append("<loc>").append(pageUrl).append("</loc>");
             sitemapXml.append("<lastmod>").append(getLastModifiedDate(page)).append("</lastmod>");
             sitemapXml.append("<changefreq>daily</changefreq>");
             sitemapXml.append("<priority>0.5</priority>");
             sitemapXml.append("</url>");
+
+            // If the page is not excluded, check and include child pages based on sitemapExcludeChildren
+            if (!isChildPagesExcluded(page)) {
+                addChildPagesToSitemap(page, sitemapXml);
+            }
         }
 
         sitemapXml.append("</urlset>");
 
         return sitemapXml.toString();
-        // Save the sitemap to JCR (DAM) or file system
-//        saveSitemapToJCR(request, sitemapXml.toString());
     }
 
     private List<Page> getAllPages(SlingHttpServletRequest request) {
@@ -75,31 +85,34 @@ public class SitemapServiceImpl implements SitemapService {
         return "Unknown";
     }
 
-//    private void saveSitemapToJCR(SlingHttpServletRequest request, String sitemapXml) throws IOException {
-//        ResourceResolver resolver = request.getResourceResolver();
-//        Session session = resolver.adaptTo(Session.class);
-//
-//        if (session == null) {
-//            throw new IOException("Unable to obtain JCR session.");
-//        }
-//
-//        try {
-//            String jcrPath = "/content/dam/wknd/sitemap/sitemap.xml";
-//            Node rootNode = session.getRootNode();
-//
-//            // Check if the path exists, if not create it
-//            if (!rootNode.hasNode(jcrPath)) {
-//                Node fileNode = rootNode.addNode(jcrPath, "nt:file");
-//                Node contentNode = fileNode.addNode("jcr:content", "nt:resource");
-//                contentNode.setProperty("jcr:data", new ByteArrayInputStream(sitemapXml.getBytes()));
-//                contentNode.setProperty("jcr:mimeType", "text/xml");
-//                contentNode.setProperty("jcr:lastModified", Calendar.getInstance());
-//            }
-//
-//            session.save();  // Save the changes to the JCR
-//
-//        } catch (Exception e) {
-//            throw new IOException("Error saving sitemap to JCR: " + e.getMessage(), e);
-//        }
-//    }
+    // Check if the page should be excluded from the sitemap
+    private boolean isPageExcluded(Page page) {
+        Boolean excludePage = page.getProperties().get("sitemapExclude", Boolean.class);
+        return excludePage != null && excludePage;
+    }
+
+    // Check if child pages should be excluded based on the sitemapExcludeChildren property
+    private boolean isChildPagesExcluded(Page page) {
+        Boolean excludeChildren = page.getProperties().get("sitemapExcludeChildren", Boolean.class);
+        return excludeChildren != null && excludeChildren;
+    }
+
+    // Add child pages to the sitemap recursively, but exclude them if needed
+    private void addChildPagesToSitemap(Page parentPage, StringBuilder sitemapXml) {
+        for (Iterator<Page> it = parentPage.listChildren(); it.hasNext(); ) {
+            Page childPage = it.next();
+
+            // If the child page is excluded, skip it
+            if (isPageExcluded(childPage)) {
+                continue;
+            }
+
+            sitemapXml.append("<url>");
+            sitemapXml.append("<loc>").append(childPage.getPath()).append("</loc>");
+            sitemapXml.append("<lastmod>").append(getLastModifiedDate(childPage)).append("</lastmod>");
+            sitemapXml.append("<changefreq>daily</changefreq>");
+            sitemapXml.append("<priority>0.5</priority>");
+            sitemapXml.append("</url>");
+        }
+    }
 }
