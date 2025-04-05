@@ -5,20 +5,17 @@ import com.day.cq.wcm.api.Page;
 import com.day.cq.wcm.api.PageManager;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.osgi.service.component.annotations.Component;
 
-import javax.jcr.Node;
-import javax.jcr.Session;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Calendar;
 
+@Component(service = SitemapService.class, immediate = true)
 public class SitemapServiceImpl implements SitemapService {
 
     @Override
-    public void generateSitemap(SlingHttpServletRequest request){
+    public String generateSitemap(SlingHttpServletRequest request){
         // Get the list of pages
         List<Page> pages = getAllPages(request);
 
@@ -38,7 +35,7 @@ public class SitemapServiceImpl implements SitemapService {
 
         sitemapXml.append("</urlset>");
 
-
+        return sitemapXml.toString();
         // Save the sitemap to JCR (DAM) or file system
 //        saveSitemapToJCR(request, sitemapXml.toString());
     }

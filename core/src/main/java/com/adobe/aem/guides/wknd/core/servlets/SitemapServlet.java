@@ -11,6 +11,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
 import javax.servlet.Servlet;
+import java.io.IOException;
 
 
 @Component(service = Servlet.class, immediate = true,
@@ -20,14 +21,14 @@ import javax.servlet.Servlet;
 public class SitemapServlet extends SlingAllMethodsServlet {
 
     @Reference
-    private SitemapService  sitemapService;
+    private transient SitemapService sitemapService;
 
     @Override
-    protected void doGet(SlingHttpServletRequest request, SlingHttpServletResponse response)
-    {
+    protected void doGet(SlingHttpServletRequest request, SlingHttpServletResponse response) throws IOException {
         response.setContentType("text/xml");
         response.setCharacterEncoding("UTF-8");
 
-        sitemapService.generateSitemap(request);
+        String sitemapData= sitemapService.generateSitemap(request);
+        response.getWriter().write(sitemapData);
     }
 }
