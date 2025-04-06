@@ -28,6 +28,11 @@ public class SitemapServlet extends SlingAllMethodsServlet {
         response.setContentType("text/xml");
         response.setCharacterEncoding("UTF-8");
 
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
+
+
         String sitemapData= sitemapService.generateSitemap(request);
         response.getWriter().write(sitemapData);
     }
