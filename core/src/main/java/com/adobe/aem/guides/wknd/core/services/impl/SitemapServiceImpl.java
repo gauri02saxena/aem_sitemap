@@ -1,90 +1,156 @@
 package com.adobe.aem.guides.wknd.core.services.impl;
 
 import com.adobe.aem.guides.wknd.core.services.SitemapService;
+import com.adobe.granite.asset.api.Asset;
+import com.adobe.granite.asset.api.AssetManager;
 import com.day.cq.wcm.api.Page;
 import com.day.cq.wcm.api.PageManager;
+import org.apache.jackrabbit.commons.JcrUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.api.resource.ModifiableValueMap;
+import org.apache.sling.api.resource.PersistenceException;
+import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.osgi.service.component.annotations.Component;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+
+import javax.jcr.*;
+import javax.jcr.lock.LockException;
+import javax.jcr.nodetype.ConstraintViolationException;
+import javax.jcr.version.VersionException;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
 
 @Component(service = SitemapService.class, immediate = true)
 public class SitemapServiceImpl implements SitemapService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SitemapServiceImpl.class);
 
-    @Override
-    public String generateSitemap(SlingHttpServletRequest request) {
-        // Get the list of pages
-        List<Page> pages = getAllPages(request);
 
-        StringBuilder sitemapXml = new StringBuilder();
-        sitemapXml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        sitemapXml.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
+    private static final String FILE_PATH = "/content/sitemaps/sitemap.xml";
+    private static final String FOLDER_PATH = "/content/sitemaps";
 
-        // Set to track pages already added to the sitemap
-        Set<String> addedPageUrls = new HashSet<>();
+//    @Override
+//    public String generateSitemap(ResourceResolver resourceResolver) {
+//        List<Page> pages = getAllPages(resourceResolver);
+//
+//        StringBuilder sitemapXml = new StringBuilder();
+//        sitemapXml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+//        sitemapXml.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
+//
+//        Set<String> addedPageUrls = new HashSet<>();
+//
+//        for (Page page : pages) {
+//            String pageUrl = page.getPath();
+//
+//            boolean isPageExcluded = isPageExcluded(page);
+//            if (isPageExcluded || addedPageUrls.contains(pageUrl)) {
+//                continue;
+//            }
+//
+//            sitemapXml.append("<url>");
+//            sitemapXml.append("<loc>").append(pageUrl).append("</loc>");
+//            sitemapXml.append("<lastmod>").append(getLastModifiedDate(page)).append("</lastmod>");
+//            sitemapXml.append("<changefreq>daily</changefreq>");
+//            sitemapXml.append("<priority>0.5</priority>");
+//            sitemapXml.append("</url>");
+//            addedPageUrls.add(pageUrl); // Mark this page as added
+//
+//            if (!isChildPagesExcluded(page)) {
+//                addChildPagesToSitemap(page, sitemapXml, addedPageUrls);
+//            }
+//        }
+//
+//        sitemapXml.append("</urlset>");
+//
+//        return sitemapXml.toString();
+//    }
+//
+//    private List<Page> getAllPages(ResourceResolver resourceResolver) {
+//
+//        PageManager pageManager = resourceResolver.adaptTo(PageManager.class);
+//
+//        if (pageManager == null) {
+//            return new ArrayList<>();
+//        }
+//
+//        List<Page> pages = new ArrayList<>();
+//
+//        Page rootPage = pageManager.getPage("/content/wknd");
+//
+//        if (rootPage != null) {
+//            findPagesRecursively(rootPage, pages);
+//        }
+//
+//        return pages;
+//    }
+//
+//    private void findPagesRecursively(Page page, List<Page> pages) {
+//        pages.add(page);
+//
+//        for (Iterator<Page> it = page.listChildren(); it.hasNext(); ) {
+//            Page childPage = it.next();
+//            findPagesRecursively(childPage, pages);
+//        }
+//    }
+@Override
+public String generateSitemap(ResourceResolver resourceResolver) {
+    List<Page> pages = getAllPages(resourceResolver);
 
-        for (Page page : pages) {
-            String pageUrl = page.getPath();
+    StringBuilder sitemapXml = new StringBuilder();
+    sitemapXml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+    sitemapXml.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
 
-            // Check if the page should be excluded based on the sitemapExclude property
-            boolean isPageExcluded = isPageExcluded(page);
-            if (isPageExcluded || addedPageUrls.contains(pageUrl)) {
-                continue; // Skip this page if excluded or already added
-            }
+    Set<String> addedPageUrls = new HashSet<>();
 
-            // Add the page to the sitemap and mark it as added
-            sitemapXml.append("<url>");
-            sitemapXml.append("<loc>").append(pageUrl).append("</loc>");
-            sitemapXml.append("<lastmod>").append(getLastModifiedDate(page)).append("</lastmod>");
-            sitemapXml.append("<changefreq>daily</changefreq>");
-            sitemapXml.append("<priority>0.5</priority>");
-            sitemapXml.append("</url>");
-            addedPageUrls.add(pageUrl); // Mark this page as added
+    for (Page page : pages) {
+        String pageUrl = page.getPath();
 
-            // Check if the page's child pages should be excluded based on sitemapExcludeChildren
-            if (!isChildPagesExcluded(page)) {
-                // If child pages are not excluded, add them to the sitemap
-                addChildPagesToSitemap(page, sitemapXml, addedPageUrls);
-            }
+        boolean isPageExcluded = isPageExcluded(page);
+        if (isPageExcluded || addedPageUrls.contains(pageUrl)) {
+            continue;
         }
 
-        sitemapXml.append("</urlset>");
+        sitemapXml.append("<url>");
+        sitemapXml.append("<loc>").append(pageUrl).append("</loc>");
+        sitemapXml.append("<lastmod>").append(getLastModifiedDate(page)).append("</lastmod>");
+        sitemapXml.append("<changefreq>daily</changefreq>");
+        sitemapXml.append("<priority>0.5</priority>");
+        sitemapXml.append("</url>");
+        addedPageUrls.add(pageUrl); // Mark this page as added
 
-        return sitemapXml.toString();
+        // Only process children for the current page (not for its ancestors)
+        addChildPagesToSitemap(page, sitemapXml, addedPageUrls);
     }
 
-    private List<Page> getAllPages(SlingHttpServletRequest request) {
-        ResourceResolver resolver = request.getResourceResolver();
-        PageManager pageManager = resolver.adaptTo(PageManager.class);
+    sitemapXml.append("</urlset>");
+
+    return sitemapXml.toString();
+}
+
+    private List<Page> getAllPages(ResourceResolver resourceResolver) {
+        PageManager pageManager = resourceResolver.adaptTo(PageManager.class);
 
         if (pageManager == null) {
             return new ArrayList<>();
         }
 
         List<Page> pages = new ArrayList<>();
-
         Page rootPage = pageManager.getPage("/content/wknd");
 
         if (rootPage != null) {
-            findPagesRecursively(rootPage, pages);
+            // Only retrieve root pages, not child pages, as `addChildPagesToSitemap` will handle them
+            pages.add(rootPage);
         }
 
         return pages;
     }
 
-    private void findPagesRecursively(Page page, List<Page> pages) {
-        pages.add(page);
-
-        for (Iterator<Page> it = page.listChildren(); it.hasNext(); ) {
-            Page childPage = it.next();
-            findPagesRecursively(childPage, pages);
-        }
-    }
 
     private String getLastModifiedDate(Page page) {
         if (page.getLastModified() != null) {
@@ -93,47 +159,194 @@ public class SitemapServiceImpl implements SitemapService {
         return "Unknown";
     }
 
-    // Check if the page should be excluded from the sitemap
     private boolean isPageExcluded(Page page) {
         Boolean excludePage = page.getProperties().get("sitemapExclude", Boolean.class);
         return excludePage != null && excludePage;
     }
 
-    // Check if child pages should be excluded based on the sitemapExcludeChildren property
-    private boolean isChildPagesExcluded(Page page) {
-        Boolean excludeChildren = page.getProperties().get("sitemapExcludeChildren", Boolean.class);
+//    private boolean isChildPagesExcluded(Page page) {
+//        Boolean excludeChildren = page.getProperties().get("sitemapExcludeChildren", Boolean.class);
+//        return excludeChildren != null && excludeChildren;
+//    }
+
+    private boolean isChildPagesExcluded(Page parentPage) {
+        Boolean excludeChildren = parentPage.getProperties().get("sitemapExcludeChildren", Boolean.class);
         return excludeChildren != null && excludeChildren;
     }
 
     private void addChildPagesToSitemap(Page parentPage, StringBuilder sitemapXml, Set<String> addedPageUrls) {
-        // First, check if the parent page has the "sitemapExcludeChildren" property set to true
+        // Check if children should be excluded for the parent page before proceeding
         boolean areChildrenExcluded = isChildPagesExcluded(parentPage);
 
         if (areChildrenExcluded) {
-            return; // If child pages are excluded, do not process any child pages
+            return; // Skip processing children if the parent has excluded them
         }
 
-        // If child pages are not excluded, recursively add them to the sitemap
         for (Iterator<Page> it = parentPage.listChildren(); it.hasNext(); ) {
             Page childPage = it.next();
 
-            // If the child page itself is excluded or already added, skip it
             if (isPageExcluded(childPage) || addedPageUrls.contains(childPage.getPath())) {
                 continue;
             }
 
-            // Ensure child page is added only if not excluded
+            // Add the child page to the sitemap if it is not excluded
             sitemapXml.append("<url>");
             sitemapXml.append("<loc>").append(childPage.getPath()).append("</loc>");
             sitemapXml.append("<lastmod>").append(getLastModifiedDate(childPage)).append("</lastmod>");
             sitemapXml.append("<changefreq>daily</changefreq>");
             sitemapXml.append("<priority>0.5</priority>");
             sitemapXml.append("</url>");
-            addedPageUrls.add(childPage.getPath()); // Mark the child page as added
+            addedPageUrls.add(childPage.getPath());
 
-            // Recursively check and add child pages of this child page if not excluded
+            // Recursively add child pages of this child page
             addChildPagesToSitemap(childPage, sitemapXml, addedPageUrls);
         }
     }
+
+
+//    private void addChildPagesToSitemap(Page parentPage, StringBuilder sitemapXml, Set<String> addedPageUrls) {
+//        boolean areChildrenExcluded = isChildPagesExcluded(parentPage);
+//
+//        if (areChildrenExcluded) {
+//            return;
+//        }
+//
+//        for (Iterator<Page> it = parentPage.listChildren(); it.hasNext(); ) {
+//            Page childPage = it.next();
+//
+//            if (isPageExcluded(childPage) || addedPageUrls.contains(childPage.getPath())) {
+//                continue;
+//            }
+//
+//            sitemapXml.append("<url>");
+//            sitemapXml.append("<loc>").append(childPage.getPath()).append("</loc>");
+//            sitemapXml.append("<lastmod>").append(getLastModifiedDate(childPage)).append("</lastmod>");
+//            sitemapXml.append("<changefreq>daily</changefreq>");
+//            sitemapXml.append("<priority>0.5</priority>");
+//            sitemapXml.append("</url>");
+//            addedPageUrls.add(childPage.getPath());
+//
+//            addChildPagesToSitemap(childPage, sitemapXml, addedPageUrls);
+//        }
+//    }
+
+    @Override
+    public void generateAndSaveSitemap(ResourceResolver resolver, String sitemapContent) {
+        try {
+            // Get the AssetManager from the ResourceResolver
+            AssetManager assetManager = resolver.adaptTo(AssetManager.class);
+
+            if (assetManager != null) {
+                String parentPath = "/content/dam/sitemaps";
+                String sitemapNodePath = parentPath + "/sitemap.xml";
+
+                // Check if the sitemaps folder exists, if not, create it
+                Resource resource = resolver.getResource(parentPath);
+                if (resource == null) {
+                    // Create the sitemaps folder if it doesn't exist
+                    JcrUtils.getOrCreateByPath(parentPath, "sling:Folder", "nt:unstructured", resolver.adaptTo(Session.class), true);
+                    LOGGER.info("Created missing folder structure: {}", parentPath);
+                }
+
+                // Check if the sitemap.xml asset already exists in the DAM
+                Asset existingAsset = assetManager.getAsset(sitemapNodePath);
+
+                if (existingAsset != null) {
+                    // If the asset exists, update its content using ModifiableValueMap
+                    ModifiableValueMap properties = existingAsset.adaptTo(ModifiableValueMap.class);
+                    properties.put("jcr:data", sitemapContent.getBytes()); // Update content
+                    existingAsset.adaptTo(Node.class).setProperty("jcr:data", Arrays.toString(sitemapContent.getBytes()));
+                    resolver.commit(); // Commit the changes to the repository
+                    LOGGER.info("Sitemap updated successfully at: {}", sitemapNodePath);
+                } else {
+                    // If the asset doesn't exist, create a new one
+                    Asset newAsset = assetManager.createAsset(sitemapNodePath);
+                    LOGGER.info("Sitemap saved successfully at: {}", sitemapNodePath);
+                }
+            }
+        } catch (RepositoryException e) {
+            LOGGER.error("Error while saving sitemap: {}", e.getMessage(), e);
+        } catch (PersistenceException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+
+//    @Override
+//
+//    public void generateAndSaveSitemap(ResourceResolver resolver, String sitemapContent) {
+//
+//        try {
+//
+//            if (resolver == null || !resolver.isLive()) {
+//
+//                throw new IllegalArgumentException("Invalid or inactive resolver");
+//
+//            }
+//
+//            Resource damRoot = resolver.getResource("/content/dam");
+//
+//            if (damRoot == null || !damRoot.isResourceType("sling:OrderedFolder")) {
+//
+//                throw new IllegalArgumentException("Invalid or missing /content/dam");
+//
+//            }
+//
+//            Session session = resolver.adaptTo(Session.class);
+//
+//            if (session == null) {
+//
+//                throw new RepositoryException("Session is null");
+//
+//            }
+//
+//            String parentPath = "/content/dam/sitemaps";
+//
+//            Node parentNode = JcrUtils.getOrCreateByPath(parentPath, "sling:OrderedFolder", "nt:unstructured", session, true);
+//
+//            String sitemapNodePath = parentPath + "/sitemap.xml";
+//
+//            Node sitemapNode;
+//
+//            if (parentNode.hasNode("sitemap.xml")) {
+//
+//                sitemapNode = parentNode.getNode("sitemap.xml");
+//
+//                Node contentNode = sitemapNode.getNode("jcr:content");
+//
+//                contentNode.setProperty("jcr:data", new ByteArrayInputStream(sitemapContent.getBytes(StandardCharsets.UTF_8)));
+//
+//                contentNode.setProperty("jcr:lastModified", Calendar.getInstance());
+//
+//            } else {
+//
+//                sitemapNode = parentNode.addNode("sitemap.xml", "nt:file");
+//
+//                Node contentNode = sitemapNode.addNode("jcr:content", "nt:resource");
+//
+//                contentNode.setProperty("jcr:mimeType", "application/xml");
+//
+//                contentNode.setProperty("jcr:lastModified", Calendar.getInstance());
+//
+//                contentNode.setProperty("jcr:data", new ByteArrayInputStream(sitemapContent.getBytes(StandardCharsets.UTF_8)));
+//
+//            }
+//
+//            session.save();
+//
+//            LOGGER.info("Sitemap saved successfully at: {}", sitemapNodePath);
+//
+//        } catch (RepositoryException e) {
+//
+//            LOGGER.error("Error while saving sitemap: {}", e.getMessage(), e);
+//
+//        }
+//
+//    }
+
+
+
+
 
 }

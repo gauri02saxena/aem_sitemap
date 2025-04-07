@@ -16,5 +16,5 @@ public @interface SchedulerConfig {
             name="Cron Expression", description = "Cron",
             type= AttributeType.STRING
     )
-    public String cronExpression() default "0 0 0 * * ?"; // Example: Runs daily at midnight
+    public String cronExpression() default "0 * * * * ?";
 }

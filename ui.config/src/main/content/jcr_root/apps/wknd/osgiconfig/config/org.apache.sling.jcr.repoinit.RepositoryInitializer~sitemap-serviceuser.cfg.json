@@ -1,0 +1,5 @@
+{    "scripts": [
+         "create service user sitemapServiceUser5 with forced path system/cq:services/wknd",
+         "set ACL for sitemapServiceUser5\n allow jcr:all on /content/wknd\n allow jcr:all on /content/dam\n allow jcr:all on /var\n allow jcr:all on /content\nend"
+      ]
+}

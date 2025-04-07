@@ -4,6 +4,7 @@ package com.adobe.aem.guides.wknd.core.servlets;
 import com.adobe.aem.guides.wknd.core.services.SitemapService;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
 
 import org.osgi.framework.Constants;
@@ -25,15 +26,17 @@ public class SitemapServlet extends SlingAllMethodsServlet {
 
     @Override
     protected void doGet(SlingHttpServletRequest request, SlingHttpServletResponse response) throws IOException {
+        ResourceResolver resourceResolver= request.getResourceResolver();
         response.setContentType("text/xml");
         response.setCharacterEncoding("UTF-8");
+
 
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         response.setHeader("Pragma", "no-cache");
         response.setDateHeader("Expires", 0);
 
 
-        String sitemapData= sitemapService.generateSitemap(request);
+        String sitemapData= sitemapService.generateSitemap(resourceResolver);
         response.getWriter().write(sitemapData);
     }
 }
