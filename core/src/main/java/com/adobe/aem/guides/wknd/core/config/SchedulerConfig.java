@@ -1,10 +1,7 @@
 package com.adobe.aem.guides.wknd.core.config;
-
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.AttributeType;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
-
-
 
 @ObjectClassDefinition(name = "Sitemap Scheduler Configuration", description = "Configuration for Sitemap Scheduler")
 public @interface SchedulerConfig {

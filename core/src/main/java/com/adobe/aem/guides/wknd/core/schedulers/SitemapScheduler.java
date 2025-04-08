@@ -1,8 +1,6 @@
 package com.adobe.aem.guides.wknd.core.schedulers;
-
 import com.adobe.aem.guides.wknd.core.config.SchedulerConfig;
 import com.adobe.aem.guides.wknd.core.services.SitemapService;
-import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.commons.scheduler.ScheduleOptions;
@@ -12,16 +10,14 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.metatype.annotations.Designate;
-
 import java.util.HashMap;
 import java.util.Map;
-
 
 @Component(service = Runnable.class, immediate = true)
 @Designate(ocd = SchedulerConfig.class)
 public class SitemapScheduler implements Runnable {
 
-    private static final String SERVICE_USER = "sitemapServiceUser5";
+    private static final String SERVICE_USER = "sitemapServiceUser1";
 
     @Reference
     private SitemapService sitemapService;
@@ -63,7 +59,6 @@ public class SitemapScheduler implements Runnable {
         try {
             Map<String, Object> params = new HashMap<>();
             params.put(ResourceResolverFactory.SUBSERVICE, SERVICE_USER);
-//            params.put("password", "admin");
             resourceResolver = resourceResolverFactory.getServiceResourceResolver(params);
             String sitemapContent = sitemapService.generateSitemap(resourceResolver);
            sitemapService.generateAndSaveSitemap(resourceResolver, sitemapContent);
