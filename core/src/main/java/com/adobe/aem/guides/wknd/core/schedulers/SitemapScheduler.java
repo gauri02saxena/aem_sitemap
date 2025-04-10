@@ -61,7 +61,7 @@ public class SitemapScheduler implements Runnable {
             params.put(ResourceResolverFactory.SUBSERVICE, SERVICE_USER);
             resourceResolver = resourceResolverFactory.getServiceResourceResolver(params);
             String sitemapContent = sitemapService.generateSitemap(resourceResolver);
-           sitemapService.generateAndSaveSitemap(resourceResolver, sitemapContent);
+            sitemapService.generateAndSaveSitemap(resourceResolver, sitemapContent);
             System.out.println(sitemapContent);
             System.out.println("Sitemap generated and stored successfully.");
         } catch (Exception e) {
