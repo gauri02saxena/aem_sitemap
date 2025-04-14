@@ -10,6 +10,9 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.metatype.annotations.Designate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,6 +21,8 @@ import java.util.Map;
 public class SitemapScheduler implements Runnable {
 
     private static final String SERVICE_USER = "sitemapServiceUser1";
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SitemapScheduler.class);
 
     @Reference
     private SitemapService sitemapService;
@@ -32,7 +37,7 @@ public class SitemapScheduler implements Runnable {
 
     @Activate
     protected void activate(SchedulerConfig config) {
-        System.out.println("Sitemap scheduler activated");
+        LOGGER.info("Sitemap scheduler activated");
 
         schedulerId = config.schedulerName().hashCode();
         addScheduler(config);
@@ -40,7 +45,7 @@ public class SitemapScheduler implements Runnable {
 
     @Deactivate
     protected void deactivate(SchedulerConfig config) {
-        System.out.println("Sitemap scheduler deactivated");
+        LOGGER.info("Sitemap scheduler deactivated");
     }
 
     private void addScheduler(SchedulerConfig config) {
@@ -49,7 +54,7 @@ public class SitemapScheduler implements Runnable {
         schedulerOptions.canRunConcurrently(false);
 
         scheduler.schedule(this, schedulerOptions);
-        System.out.println("Sitemap scheduler activated with cron expression: " + config.cronExpression());
+        LOGGER.info("Sitemap scheduler activated with cron expression");
     }
 
     @Override
@@ -62,10 +67,10 @@ public class SitemapScheduler implements Runnable {
             resourceResolver = resourceResolverFactory.getServiceResourceResolver(params);
             String sitemapContent = sitemapService.generateSitemap(resourceResolver);
             sitemapService.generateAndSaveSitemap(resourceResolver, sitemapContent);
-            System.out.println(sitemapContent);
-            System.out.println("Sitemap generated and stored successfully.");
+            LOGGER.info(sitemapContent);
+            LOGGER.info("Sitemap generated and stored successfully.");
         } catch (Exception e) {
-            System.out.println("Error during scheduled sitemap generation" + e.getMessage());
+            LOGGER.error("Error during scheduled sitemap generation: {}", e.getMessage(), e);
         }
     }
 }

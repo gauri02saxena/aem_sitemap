@@ -37,15 +37,15 @@ public class SitemapServiceImpl implements SitemapService {
             String pageUrl = page.getPath();
 
             boolean isPageAndChildrenExcluded = isPageAndChildrenExcluded(page);
-            boolean areChildrenExcluded = isPageExcluded(page);
+            boolean isPageExcluded = isPageExcluded(page);
 
-            if (isPageAndChildrenExcluded) {
-                if (!areChildrenExcluded) {
+            if (isPageExcluded) {
+                if (!isPageAndChildrenExcluded) {
                     addChildPagesToSitemap(page, sitemapXml, addedPageUrls, true);
                 }
                 continue;
             } else {
-                if (areChildrenExcluded) {
+                if (isPageAndChildrenExcluded) {
                     continue;
                 } else {
                     addPageToSitemap(page, sitemapXml, addedPageUrls, false);
@@ -145,7 +145,7 @@ public class SitemapServiceImpl implements SitemapService {
 
                 Resource resource = resolver.getResource(parentPath);
                 if (resource == null) {
-                    JcrUtils.getOrCreateByPath(parentPath, "sling:Folder", "sling:Folder", Objects.requireNonNull(resolver.adaptTo(Session.class)), true);
+                    JcrUtils.getOrCreateByPath(parentPath, "sling:Folder", "sling:Folder", resolver.adaptTo(Session.class), true);
                     LOGGER.info("Created missing folder structure: {}", parentPath);
                 }
 
@@ -153,9 +153,8 @@ public class SitemapServiceImpl implements SitemapService {
                 if (session != null) {
                     Node parentNode = session.getNode(parentPath);
 
-                    // Check if sitemap.xml already exists
                     if (parentNode.hasNode("sitemap.xml")) {
-                        // If the file exists, update the content
+
                         Node fileNode = parentNode.getNode("sitemap.xml");
                         Node contentNode = fileNode.getNode("jcr:content");
                         contentNode.setProperty("jcr:data", session.getValueFactory().createBinary(new ByteArrayInputStream(sitemapContent.getBytes())));
